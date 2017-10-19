@@ -6,9 +6,15 @@ import tweepy
 import time
 import re
 
+import classifier
+
 class StreamWatcherListener(tweepy.StreamListener):
 
     status_wrapper = TextWrapper(width=60, initial_indent='    ', subsequent_indent='    ')
+
+    def __init__(self, db):
+        tweepy.StreamListener.__init__(self)
+        self.db = db
 
     def on_status(self, status):
         try:
@@ -49,10 +55,21 @@ class StreamWatcherListener(tweepy.StreamListener):
             if decision in validReplies:
                 validDecision = True
                 if (decision != 'BLOCK')and(decision != 'IGNORE'):
-                    tweetWithOpinion = (clearText, decision)
-                    print(tweetWithOpinion)
+                    tweetWithOpinion = self.__extractWords__(clearText, decision)
+                    # Add entry to MongoDB
+                    print(tweetWithOpinion[0], tweetWithOpinion[1])
+                    classifier.addTrainingTweet(self.db, tweetWithOpinion)
+                    print(classifier.get_tweet(self.db))
+
             else:
                 print("ERROR: Invalid reply" + decision)
+
+    # Split tweet's text into words equal or bigger than three words
+    def __extractWords__(self, clearText, decision):
+        wordsFiltered = [e.lower() for e in clearText.split() if len(e) >= 3]
+        result = (wordsFiltered, decision)
+        return result
+
 
     # This removes any hash signs and links from a Tweets text
     def cleanupTweetText(self, tweetText):
@@ -127,10 +144,13 @@ def  launchStreamClient():
     auth = tweepy.auth.OAuthHandler(consumer_key, consumer_secret)
     auth.set_access_token(access_token, access_token_secret)
 
+    # Start DB
+    db = classifier.get_db()
+
     #listOfFriends('ldconejo',auth, "friendlist.csv")
 
     # Creat stream
-    stream = tweepy.Stream(auth, StreamWatcherListener(), timeout=None)
+    stream = tweepy.Stream(auth, StreamWatcherListener(db), timeout=None)
 
     # Start stream in sample mode
     #stream.sample()
