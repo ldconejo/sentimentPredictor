@@ -149,15 +149,18 @@ def  launchStreamClient():
 
     #listOfFriends('ldconejo',auth, "friendlist.csv")
 
-    # Creat stream
+    # Create stream
     stream = tweepy.Stream(auth, StreamWatcherListener(db), timeout=None)
 
     # Start stream in sample mode
     #stream.sample()
 
-    # Start stream in filter mode
-    # First, get list of friends
+    # List training data
+    trainingData = classifier.get_trainingData(db)
+    print(trainingData)
 
+    # First, get list of friends
     friendList = openListOfFriends("friendlist.csv")
-    print(friendList)
+
+    # Start stream in filter mode
     stream.filter(follow=friendList)
