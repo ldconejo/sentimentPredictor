@@ -49,6 +49,10 @@ class StreamWatcherListener(tweepy.StreamListener):
             clearText = self.cleanupTweetText(tweetText)
             print("CLEAR TEXT:" + clearText)
             print("USER: " + tweetUserScreenName)
+
+            # Run tweet through classifier and get its opinion
+            prediction = classifier.classifyTweet(clearText)
+            print("PREDICTION:" + prediction)
             decision = input("Do you like this tweet?")
             decision = decision.upper()
             decision = decision.strip()
@@ -60,6 +64,9 @@ class StreamWatcherListener(tweepy.StreamListener):
                     print(tweetWithOpinion[0], tweetWithOpinion[1])
                     classifier.addTrainingTweet(self.db, tweetWithOpinion)
                     print(classifier.get_tweet(self.db))
+
+                    # Retrain the classifier with the new information
+                    classifier.runClassifier(self.db)
 
             else:
                 print("ERROR: Invalid reply" + decision)
@@ -148,16 +155,14 @@ def  launchStreamClient():
     db = classifier.get_db()
 
     #listOfFriends('ldconejo',auth, "friendlist.csv")
+    # Initial training of classifier
+    classifier.runClassifier(db)
 
     # Create stream
     stream = tweepy.Stream(auth, StreamWatcherListener(db), timeout=None)
 
     # Start stream in sample mode
     #stream.sample()
-
-    # List training data
-    trainingData = classifier.get_trainingData(db)
-    print(trainingData)
 
     # First, get list of friends
     friendList = openListOfFriends("friendlist.csv")
